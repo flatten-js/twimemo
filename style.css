@@ -1,0 +1,16 @@
+#calendar {
+  width: 100%;
+  border: 1px solid #c3c3c3;
+  padding: 8px;
+  max-width: 360px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+#memo {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #c3c3c3;
+  border-top: none;
+  box-sizing: border-box;
+}
