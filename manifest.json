@@ -12,12 +12,21 @@
   ],
   "content_scripts": [{
     "matches": ["https://twitter.com/*"],
+    "js": [
+      "./src/flatpickr.js",
+      "./src/editor/index.js",
+      "./src/editor/plugins/checklist.js",
+      "./src/editor/plugins/nested-list.js",
+      "./src/editor/plugins/table.js",
+      "./src/editor/plugins/drag-drop.js",
+      "./content.js"
+    ],
     "css": [
-      "flatpickr.min.css",
-      "style.css"
+      "./assets/css/flatpickr.min.css",
+      "./assets/css/style.css"
     ]
   }],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "./background.js"
   }
 }

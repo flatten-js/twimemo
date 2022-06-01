@@ -1,43 +1,75 @@
-(async () => {
-  const $content = document.createElement('div')
-  $content.innerHTML = `
-    <div id="memo-content" class="css-1dbjc4n r-x572qd r-1d6w8o1 r-1867qdf r-1phboty r-rs99b7 r-1ifxtd0 r-1udh08x">
-      <div class="r-ymttw5 r-1f1sjgu">
-        <input type="text" id="calendar" />
-        <div>
-          <div id="date"></div>
-          <textarea id="memo" rows="8"></textarea>
-        </div>
-      </div>
-    </div>
-  `
+window.twimemo = {
+  running: false,
+  current_date: null,
+  async init() {
+    if (this.running) return
+    if (document.getElementById('twimemo')) return
 
-  await new Promise(resolve => {
-    setTimeout(function run() {
-      if (document.getElementById('memo-content')) return resolve()
-      
-      let $target = document.querySelector('div.css-1dbjc4n.r-x572qd.r-1d6w8o1.r-1867qdf.r-1phboty.r-rs99b7.r-1ifxtd0.r-1udh08x')
-      if (!$target) return setTimeout(run, 250)
+    this.running = true
+    try {
+      await new Promise((resolve, reject) => {
+        let retry = 8
+        setTimeout(function run() {
+          const $target = document.querySelector('div.css-1dbjc4n.r-x572qd.r-1d6w8o1.r-1867qdf.r-1phboty.r-rs99b7.r-1ifxtd0.r-1udh08x')
+          if ($target) {
+            $target.insertAdjacentHTML('beforebegin', `
+              <div id="twimemo" class="css-1dbjc4n r-x572qd r-1d6w8o1 r-1867qdf r-1phboty r-rs99b7 r-1ifxtd0 r-1udh08x">
+                <div class="r-ymttw5 r-1f1sjgu">
+                  <input type="text" id="calendar" />
+                  <div>
+                    <div id="date"></div>
+                    <div id="editorjs"></div>
+                  </div>
+                </div>
+              </div>
+            `)
+            resolve()
+          } else {
+            if (!--retry) return reject()
+            setTimeout(run, 250)
+          }
+        }, 0)
+      })
 
-      $target.before($content)
-      resolve()
-    }, 0)
-  })
+      const data = JSON.parse(localStorage.getItem('twimemo') || '{}')
 
-  const twimemo = JSON.parse(localStorage.getItem('twimemo') || '{}')
-  let current_date;
+      const editor = new EditorJS({
+        tools: {
+          checklist: {
+            class: Checklist,
+            inlineToolbar: true
+          },
+          list: {
+            class: NestedList,
+            inlineToolbar: true
+          },
+          table: {
+            class: Table,
+            inlineToolbar: true
+          }
+        },
+        onChange: async () => {
+          data[this.current_date] = await editor.save()
+          localStorage.setItem('twimemo', JSON.stringify(data))
+        },
+        minHeight: 0
+      })
 
-  const $memo = document.getElementById('memo')
-  $memo.addEventListener('blur', () => {
-    twimemo[current_date] = $memo.value
-    localStorage.setItem('twimemo', JSON.stringify(twimemo))
-  })
+      await editor.isReady
+      new DragDrop(editor)
 
-  const update = date => {
-    current_date = date
-    $memo.value = twimemo[current_date] || ''
+      const fp = flatpickr('#calendar', {
+        onChange: (_, date) => {
+          this.current_date = date
+          const body = data[this.current_date]
+          if (body?.blocks.length) editor.render(body)
+          else editor.clear()
+        }
+      })
+
+      fp.setDate(new Date(), true)
+    } finally {
+      this.running = false
+    }
   }
-
-  const fp = flatpickr('#calendar', { onChange: (_, date) => update(date) })
-  fp.setDate(new Date(), true)
-})()
+}
