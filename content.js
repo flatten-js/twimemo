@@ -1,6 +1,15 @@
 window.twimemo = {
   running: false,
+  data: JSON.parse(localStorage.getItem('twimemo') || '{}'),
   current_date: null,
+  _update() {
+    const $style = document.getElementById('twimemo-style')
+    const selector = Object.entries(this.data).reduce((acc, [k, v]) => {
+      if (!v.blocks.length) return acc
+      return [...acc, `span[aria-label="${k}"]`]
+    }, []).join(',')
+    $style.innerHTML = `${selector} { text-decoration: underline; }`
+  },
   async init() {
     if (this.running) return
     if (document.getElementById('twimemo')) return
@@ -8,7 +17,7 @@ window.twimemo = {
     this.running = true
     try {
       await new Promise((resolve, reject) => {
-        let retry = 8
+        let retry = 5000 / 250
         setTimeout(function run() {
           const $target = document.querySelector('div.css-1dbjc4n.r-x572qd.r-1d6w8o1.r-1867qdf.r-1phboty.r-rs99b7.r-1ifxtd0.r-1udh08x')
           if ($target) {
@@ -31,8 +40,6 @@ window.twimemo = {
         }, 0)
       })
 
-      const data = JSON.parse(localStorage.getItem('twimemo') || '{}')
-
       const editor = new EditorJS({
         tools: {
           checklist: {
@@ -49,8 +56,9 @@ window.twimemo = {
           }
         },
         onChange: async () => {
-          data[this.current_date] = await editor.save()
-          localStorage.setItem('twimemo', JSON.stringify(data))
+          this.data[this.current_date] = await editor.save()
+          localStorage.setItem('twimemo', JSON.stringify(this.data))
+          this._update()
         },
         minHeight: 0
       })
@@ -59,17 +67,25 @@ window.twimemo = {
       new DragDrop(editor)
 
       const fp = flatpickr('#calendar', {
+        static: true,
+        ariaDateFormat: 'Y-m-d',
         onChange: (_, date) => {
           this.current_date = date
-          const body = data[this.current_date]
+          const body = this.data[this.current_date]
           if (body?.blocks.length) editor.render(body)
           else editor.clear()
+          scrollBy(0, -0.001)
         }
       })
 
       fp.setDate(new Date(), true)
+    } catch (e) {
+      console.error(e)
     } finally {
       this.running = false
     }
   }
 }
+
+document.head.insertAdjacentHTML('afterbegin', '<style id="twimemo-style"></style>')
+window.twimemo._update()
